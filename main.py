@@ -1,7 +1,9 @@
 import subprocess
 from pwn import *
-from capstone import *
 from sys import argv
+import ropper
+import rzpipe
+from capstone import *
 
 '''
 
@@ -75,6 +77,7 @@ class App:
 
     # ======================= STATIC SECTION ==========================
     
+    # VERY IMPORTANT: I HAVE TO FIX CAPSTONE TO RZ
     # driver for anything needing disassembly
     def handle_disassembly(self, binary):
         self.elf = ELF(binary)
@@ -149,6 +152,9 @@ class App:
     # ============== SYMBOLIC SECTION ====================
 
     # ================= ROP SECTION ======================
+    # rewriting the get_gadgets() function
+    def get_gadgets2(self, file):
+        pass
 
     # call ROPgadget and return an array of Gadget objects
     def get_gadgets(self, file):

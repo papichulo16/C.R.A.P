@@ -1,3 +1,3 @@
-C.R.A.P (Capstone Recursive Automatic Pwner)
+C.R.A.P (Completely Reasonable Automatic Pwner)
 
 Made by Luis Abraham, Justin Bower, and Ludendorf Brice
