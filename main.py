@@ -8,7 +8,7 @@ from sys import argv
     solver will try to go statically (capstone) => dynamically (gdb) => symbolically (angr) 
 
 '''
-
+# Might change Capstone to r2pipe
 # Gadget object to make things easier
 class Gadget:
     def __init__(self, a, g):
