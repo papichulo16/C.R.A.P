@@ -1,7 +1,7 @@
 import subprocess
 from pwn import *
 from sys import argv
-import ropper
+import ropper as r
 import rzpipe as rz
 from capstone import *
 
@@ -22,10 +22,10 @@ class App:
         self.elf = {}
         
         # initialize ropper & ropper service
-        rs = RopperService()
+        rs = r.RopperService()
         rs.addFile(binary)
 
-        self.ropper = Ropper(rs)
+        self.ropper = r.Ropper(rs)
 
         # analyze, put anything that depends on self.pipe after this line
         self.pipe.cmd("aaa")
@@ -95,15 +95,16 @@ class App:
     # self explanatory, returns the string to overflow
     # ===== COME BACK TO THIS, COREDUMPS ARE UNRELIABLE =====
     def find_overflow(self, binary):
-        # this writes current binary to txt file that stores bins
-        # be careful/maybe change this?? This can be vulnerable to a race condition 
-        # and fuck everything up
-        with open("cur_bin", "a") as file:
-            file.write(binary)
+        pattern = cyclic(0x500)
 
-        # call gdb with the corresponding script
-        io = subprocess.Popen(["gdb", "-x", "./gdb-scripts/overflow.py"], stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = io.communicate()
+        # call gdb with the script I made (which is awesome, by the way)
+        # gdb scripts are cool as hell
+        # i have no clue why subprocess is being like this :(
+        io = subprocess.Popen(["gdb", "-q", "-x", "./gdb-scripts/inspect_registers.gdb", "-ex", f"\"run_binary {binary} {'A'*0x100}\""], stdout=subprocess.PIPE)
+        out = io.communicate()
+
+        print("===========================")
+        print(out)
 
     # ================= ROP SECTION ======================
     # returns an array that shows which regs are used
