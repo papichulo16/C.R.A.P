@@ -4,6 +4,8 @@ from sys import argv
 import ropper as r
 import rzpipe as rz
 from capstone import *
+import os
+import random
 
 '''
 
@@ -30,8 +32,6 @@ class App:
         # analyze, put anything that depends on self.pipe after this line
         self.pipe.cmd("aaa")
         self.elf = self.pipe.cmd("aflj")
-
-        self.find_overflow(binary) 
 
         
     # use checksec to see what protections are in the binary
@@ -94,11 +94,37 @@ class App:
     
     # using a universal function did not work :(
     # creating gdb script on the fly instead
-    def find_overflow2(self, binary):
-        pass
+    def find_overflow(self, binary):
+        try:
+            pattern = cyclic(0x200)
+
+            # this approach will just be to write my own gdb script on the fly and then delete it
+            script_contents = f'''
+                
+                file {binary}
+                run <<< {pattern.decode('utf-8')}
+
+                p $rbp
+
+            '''
+
+            rand_name = "./gdb-scripts/script" + str(random.randint(0, 0xfffffff)) + ".gdb"
+            
+            with open(rand_name, "w") as file:
+                file.write(script_contents)
+
+            io = subprocess.run(["gdb", "-x", rand_name, "-batch"], stdout=subprocess.PIPE, text=True).stdout
+            io = io.split("\n")[-2][-18:]
+            os.remove(rand_name)
+
+            return "A" * (cyclic_find(int.to_bytes(int(io, 16), 8).decode('utf-8')[::-1][4:]) + 4)
+
+        except:
+            print("[!] Could not find overflow.")
+            return None
 
     # self explanatory, returns the string to overflow
-    def find_overflow(self, binary):
+    def find_overflow2(self, binary):
         pattern = cyclic(0x500)
 
         # call gdb with the script I made (which is awesome, by the way)
