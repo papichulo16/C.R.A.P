@@ -91,20 +91,23 @@ class App:
         out = io.recv()
 
         return b"0x" in out
+    
+    # using a universal function did not work :(
+    # creating gdb script on the fly instead
+    def find_overflow2(self, binary):
+        pass
 
     # self explanatory, returns the string to overflow
-    # ===== COME BACK TO THIS, COREDUMPS ARE UNRELIABLE =====
     def find_overflow(self, binary):
         pattern = cyclic(0x500)
 
         # call gdb with the script I made (which is awesome, by the way)
         # gdb scripts are cool as hell
         # i have no clue why subprocess is being like this :(
-        io = subprocess.Popen(["gdb", "-q", "-x", "./gdb-scripts/inspect_registers.gdb", "-ex", f"\"run_binary {binary} {'A'*0x100}\""], stdout=subprocess.PIPE)
-        out = io.communicate()
+        io = subprocess.run(["gdb", "-q", "-x", "./gdb-scripts/inspect_registers.gdb", "-ex", f"\"run_binary {binary} {pattern.decode('utf-8')}\"", "-batch"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout
 
         print("===========================")
-        print(out)
+        print(io)
 
     # ================= ROP SECTION ======================
     # returns an array that shows which regs are used
@@ -143,6 +146,5 @@ class App:
         return None
 
 if __name__ == "__main__":
-    print(argv[1]) 
     app = App(argv[1])
 

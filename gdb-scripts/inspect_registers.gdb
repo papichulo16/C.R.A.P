@@ -12,3 +12,6 @@ define run_binary
 	quit
 end
 
+set logging file /dev/stderr
+set logging enabled on
+
