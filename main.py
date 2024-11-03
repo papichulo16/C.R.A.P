@@ -24,7 +24,14 @@ class App:
         self.pipe = rz.open(binary)
         self.elf = {}
         self.pwnelf = ELF(binary, False)
-        self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
+        self.pwnlibc = None
+
+        # if there is a libc version then yay
+        try:
+            self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
+
+        except:
+            pass
         
         # initialize ropper & ropper service
         self.rs = r.RopperService()
@@ -37,9 +44,15 @@ class App:
         self.elf = self.pipe.cmd("aflj")
         
         #one = self.find_one_gadget(binary)
-        self.ret2syscall(binary)
+        #self.bonus(binary)
 
     # ================ SOLVE FUNCTIONS ===================
+
+    # it is just a ret2win with a strcmp at the beginning
+    # to distinguish it you just have to look for the `strlen`
+    # also be careful with the win function since it sometimes calls /bin/sh and other times cat flag.txt
+    def bonus(self, binary):
+        pass
 
     def ret2syscall(self, binary):
         io = process(binary)
