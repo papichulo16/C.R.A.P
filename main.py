@@ -115,8 +115,9 @@ def handle_exploits(binary):
 
 
 if __name__ == "__main__":
+    
     # testing grounds
-    bins = [ f"./ace-student/test-bins/bin-ret2execve-{i}" for i in range(10) ]
+    bins = [ f"./ace-student/test-bins/bin-ret2system-{i}" for i in range(10) ]
     count = 0
     start = time.time()
     
@@ -128,6 +129,9 @@ if __name__ == "__main__":
 
     end = time.time()
     print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
+    
 
+    #flag = handle_exploits("./ace-student/test-bins/bin-ret2execve-0")
+    #print(flag)
     #e = App(argv[1])
 
