@@ -10,6 +10,9 @@ class Dynamic:
         io = process(binary)
 
         out = io.recvuntil(b">>>")
+    
+        if b"would you like to edit" in out:
+            return "array"
 
         if b"0x" in out:
             return "libc"

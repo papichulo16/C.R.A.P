@@ -16,6 +16,17 @@ def handle_exploits(binary):
     libc_leak = None
     syscall = None
     
+    if printf == "array":
+        print("[*] Array abuse detected.")
+
+        flag = e.arrayabuse(binary)
+
+        if not flag:
+            # angr??
+            pass
+
+        return flag.decode()
+
     # printf vulns -- read/write/got overwrite
     if printf == "printf":
         return
@@ -114,24 +125,25 @@ def handle_exploits(binary):
 
 
 
-if __name__ == "__main__":
-    
-    # testing grounds
-    bins = [ f"./ace-student/test-bins/bin-ret2system-{i}" for i in range(10) ]
-    count = 0
-    start = time.time()
-    
-    for binary in bins:
-        flag = handle_exploits(binary)
+#if __name__ == "__main__":
+# testing grounds
+bins = [ f"./ace-student/test-bins/bin-ret2one-{i}" for i in range(10) ]
+count = 0
+start = time.time()
+flags = []
 
-        if flag == "flag{your_mom}":
-            count += 1
+for binary in bins:
+    flag = handle_exploits(binary)
+    flags.append(flag)
 
-    end = time.time()
-    print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
-    
+    if flag == "flag{your_mom}":
+        count += 1
 
-    #flag = handle_exploits("./ace-student/test-bins/bin-ret2execve-0")
-    #print(flag)
-    #e = App(argv[1])
+end = time.time()
+print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
+#print(flags)
+
+#flag = handle_exploits("./ace-student/test-bins/bin-arrayabuse-6")
+#print(flag)
+#e = App(argv[1])
 
