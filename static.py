@@ -1,5 +1,5 @@
 class Static:
-        # ======================= STATIC SECTION ==========================
+    # ======================= STATIC SECTION ==========================
 
     # use checksec to see what protections are in the binary
     def get_protections(self, binary):

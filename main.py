@@ -22,7 +22,6 @@ def handle_exploits(binary):
         flag = e.arrayabuse(binary)
 
         if not flag:
-            # angr??
             pass
 
         return flag.decode()
@@ -127,12 +126,13 @@ def handle_exploits(binary):
 
 #if __name__ == "__main__":
 # testing grounds
-bins = [ f"./ace-student/test-bins/bin-ret2one-{i}" for i in range(10) ]
+bins = [ f"./ace-student/test-bins/bin-arrayabuse-{i}" for i in range(10) ]
 count = 0
 start = time.time()
 flags = []
 
 for binary in bins:
+    print("========== " + binary)
     flag = handle_exploits(binary)
     flags.append(flag)
 
