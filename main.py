@@ -28,7 +28,16 @@ def handle_exploits(binary):
 
     # printf vulns -- read/write/got overwrite
     if printf == "printf":
-        return
+        # printf read
+        print("[*] printf read")
+
+        flag = e.printf_read_var(binary)
+
+        if not flag:
+            # angr??
+            pass
+
+        return flag.decode()
     
     elif printf == "libc":
         # libc leak -- ret2one
@@ -126,7 +135,7 @@ def handle_exploits(binary):
 
 #if __name__ == "__main__":
 # testing grounds
-bins = [ f"./ace-student/test-bins/bin-arrayabuse-{i}" for i in range(10) ]
+bins = [ f"./ace-student/test-bins/bin-printf-read-var-{i}" for i in range(10) ]
 count = 0
 start = time.time()
 flags = []
@@ -136,7 +145,7 @@ for binary in bins:
     flag = handle_exploits(binary)
     flags.append(flag)
 
-    if flag == "flag{your_mom}":
+    if flag == "flag{your_mom_is_very_beautiful_to_me}":
         count += 1
 
 end = time.time()
