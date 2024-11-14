@@ -15,6 +15,10 @@ def handle_exploits(binary):
     win = False
     libc_leak = None
     syscall = None
+
+    if True:
+        e.printf_write_var(binary)
+        return
     
     if printf == "array":
         print("[*] Array abuse detected.")
@@ -134,6 +138,7 @@ def handle_exploits(binary):
 
 
 #if __name__ == "__main__":
+'''
 # testing grounds
 bins = [ f"./ace-student/test-bins/bin-printf-read-var-{i}" for i in range(10) ]
 count = 0
@@ -151,8 +156,8 @@ for binary in bins:
 end = time.time()
 print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
 #print(flags)
-
-#flag = handle_exploits("./ace-student/test-bins/bin-arrayabuse-6")
+'''
+flag = handle_exploits("./ace-student/test-bins/bin-rop-parameters-0")
 #print(flag)
 #e = App(argv[1])
 

@@ -62,6 +62,29 @@ class Static:
 
         # return the function used in rsi from the plt table
 
+    def get_cmps(self, function):
+        bob = []
+
+        for alice in function["ops"]:
+            if "cmp" in alice["disasm"]:
+                bob.append(alice)
+
+        return bob
+
+    def cmp_params(self, function):
+        arr = self.get_cmps(function)
+        values = {}
+        try:
+            for instruction in arr:
+                asm = instruction["disasm"].split(",")
+                values[asm[0][asm[0].index("var_") + 4:asm[0].index("]") - 1]] = int(asm[1], 16)
+
+        except:
+            pass
+
+        print(values)
+         
+    
     # this function will return what the value is for each register at a specific call
     # WARNING: be careful with the amount of params it will be looking for since if done wrong it will search too far
     def find_params(self, function, call_idx, params=1, debug=False):
