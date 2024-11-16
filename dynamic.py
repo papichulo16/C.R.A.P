@@ -18,10 +18,21 @@ class Dynamic:
             return "libc"
 
         io.sendline(b"%p")
-        out = io.recv()
+        out = io.recvall(0.5)
 
         if b"0x" in out:
             return "printf"
+
+        return None
+
+    def find_printf_offset(self, binary):
+        for i in range(50):
+            io = process(binary)
+            io.sendlineafter(b">>>", f"AAAAAA %{i+1}$x".encode())
+            data = io.recvall(1)
+
+            if b"AAAAAA 414141" in data:
+                return i + 1
 
         return None
 

