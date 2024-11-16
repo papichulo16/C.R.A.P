@@ -27,7 +27,6 @@ def handle_exploits(binary):
         return flag.decode()
 
     # printf vulns -- read/write/got overwrite
-    print(printf)
     if printf == "printf":
         if "pwnme" in e.pwnelf.sym.keys():
             print("[*] Printf write var detected.")
@@ -36,6 +35,17 @@ def handle_exploits(binary):
 
             if not flag:
                 # kys???
+                pass
+
+            return flag.decode()
+
+        if "win" in e.pwnelf.sym.keys():
+            print("[*] GOT overwrite detected.")
+
+            flag = None
+
+            if not flag:
+                # kys again???
                 pass
 
             return flag.decode()
@@ -106,9 +116,6 @@ def handle_exploits(binary):
 
         return flag.decode()
 
-    # array abuse -- order subject to change
-
-
     # syscall gadget -- ret2syscall 
     for file, gadget in e.rs.search(search="syscall"):
         if "syscall;" in str(gadget):
@@ -143,30 +150,69 @@ def handle_exploits(binary):
 
     # write gadget -- write gadgets -- order subject to change
 
+# ================ TESTING GROUNDS ===================
 
 
-#if __name__ == "__main__":
+def test_category(category):
+    bins = [ f"./ace-student/test-bins/{category}-{i}" for i in range(10) ]
+    count = 0
+    start = time.time()
+    flags = []
 
-# testing grounds
-bins = [ f"./ace-student/test-bins/bin-printf-write-var-{i}" for i in range(10) ]
-count = 0
-start = time.time()
-flags = []
+    for binary in bins:
+        print("========== " + binary)
+        flag = handle_exploits(binary)
+        flags.append(flag)
 
-for binary in bins:
-    print("========== " + binary)
-    flag = handle_exploits(binary)
-    flags.append(flag)
+        if flag == "flag{your_mom_is_very_beautiful_to_me}":
+            count += 1
 
-    if flag == "flag{your_mom_is_very_beautiful_to_me}":
-        count += 1
+    end = time.time()
+    print(f"==== Test conclusion: {count}/10 in {round(end - start, 2)} seconds. ====")
 
-end = time.time()
-print(f"==== Test conclusion: {count}/10 in {end - start} seconds. ====")
-#print(flags)
+    return [count, round(end - start, 2)]
+    #print(flags)
+
+def deep_test():
+    categories = [
+        "bin-arrayabuse",
+        "bin-got-overwrite",
+        "bin-printf-read-var",
+        "bin-printf-write-var",
+        "bin-ret2execve",
+        "bin-ret2one",
+        "bin-ret2syscall",
+        "bin-ret2system",
+        "bin-ret2win",
+        "bin-rop-parameters",
+        "bin-write-gadgets"
+    ]
+
+    results = []
+    total = [0, 0]
+
+    for cat in categories:
+        try:
+            alice = test_category(cat)
+            total[0] += alice[0]
+            total[1] += alice[1]
+            results.append(alice)
+
+        except:
+            print("Error in " + cat)
+            results.append([-1, -1])
+
+    print("================ RESULTS ================\n")
+    for i in range(len(categories)):
+        print(f"{categories[i]}: {results[i][0]}/10 in {results[i][1]} seconds.")
+
+    print(f"\nTotal: {total[0]}/110 in {total[1]} seconds (or {round(total[1] / 60, 2)} minutes).\n")
+    print("=========================================")
+
+
+test_category("bin-printf-write-var")
+#deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
 #print(flag)
-#print(flag)
-#e = App(argv[1])
 
