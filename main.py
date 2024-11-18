@@ -210,8 +210,8 @@ def deep_test():
     print("=========================================")
 
 
-test_category("bin-printf-write-var")
-#deep_test()
+#test_category("bin-arrayabuse")
+deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
 #print(flag)
