@@ -82,6 +82,9 @@ def handle_exploits(binary):
         return flag.decode()
 
     # check for "win" in pwnelf.sym -- ret2win/rop params
+    if "constrained_win" in e.pwnelf.sym.keys():
+        pass
+
     if "win" in e.pwnelf.sym.keys():
         win = True
         #e.ret2win(binary)
