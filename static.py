@@ -83,6 +83,7 @@ class Static:
             pass
 
         print(values)
+        return values
          
     
     # this function will return what the value is for each register at a specific call

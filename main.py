@@ -15,9 +15,10 @@ def handle_exploits(binary):
     win = False
     libc_leak = None
     syscall = None
+    constrained_win = False
 
     if True:
-        e.printf_write_var(binary)
+        e.rop_parameters(binary)
         return
     
     if printf == "array":
@@ -67,6 +68,10 @@ def handle_exploits(binary):
     if "win" in e.pwnelf.sym.keys():
         win = True
         #e.ret2win(binary)
+
+    if "constrained_win" in e.pwnelf.sym.keys():
+        constrained_win = True
+        # e.rop_parameters(binary)
 
     # check for "execve" in pwnelf.plt -- ret2execve
     if "execve" in e.pwnelf.plt.keys():
