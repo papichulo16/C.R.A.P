@@ -1,9 +1,13 @@
 from pwn import *
 import subprocess
 import os
+import angr
+import sys
+import claripy
 
 class Dynamic:
-    # ======================== DYNAMIC SECTION ========================
+    def __init__(self):
+        self.angrbuf = None
 
     # find printf vuln
     def detect_printf_vuln(self, binary):
@@ -79,4 +83,49 @@ class Dynamic:
         print("===========================")
         print(io)
 
+    # these functions will angrify the world!!!!!!!!!
+    def check_mem_corruption(self, simgr):
+        if len(simgr.unconstrained):
+            for path in simgr.unconstrained:
+                if path.satisfiable(extra_constraints=[path.regs.pc == b"AAAAAAAA"]):
+                    path.add_constraints(path.regs.pc == b"AAAAAAAA")
+                    
+                    if path.satisfiable():
+                        temp = path.solver.eval(self.angrbuf, cast_to=bytes)
+
+                        try:
+                            self.angrbuf = temp[:temp.index(b"AAAAAAAAA")]
+                            
+                            simgr.stashes['mem_corrupt'].append(path)
+
+                        except:
+                            pass
+
+                    simgr.stashes['unconstrained'].remove(path)
+                    simgr.drop(stash='active')
+
+        return simgr
+
+    def find_overflow_angr(self, binary, start_function):
+        # get angr to look for an undefined state
+        p = angr.Project(binary, load_options={"auto_load_libs": False})
+        self.angrbuf = claripy.BVS("input", 8 * 1024)
+
+        state = p.factory.blank_state(addr=start_function, stdin=self.angrbuf, add_options=angr.options.unicorn)
+
+        simgr = p.factory.simgr(state, save_unconstrained=True)
+        simgr.stashes['corrupt']  = []
+
+        def prevent_death(state):
+            read_size = state.solver.eval(state.regs.rsi)
+            if read_size > 10240:
+                simgr.drop(stash = "active")
+
+        p.hook_symbol("fgets", prevent_death)
+        p.hook_symbol("scanf", prevent_death)  
+
+        simgr.explore(step_func=self.check_mem_corruption)
+
+        print(simgr.stashes["corrupt"])
+        print(self.angrbuf)
 
