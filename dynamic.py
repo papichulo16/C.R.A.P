@@ -8,6 +8,7 @@ import claripy
 class Dynamic:
     def __init__(self):
         self.angrbuf = None
+        self.offset = None
 
     # find printf vuln
     def detect_printf_vuln(self, binary):
@@ -84,25 +85,25 @@ class Dynamic:
         print(io)
 
     # these functions will angrify the world!!!!!!!!!
+    # got this code from some blog post and marcus' S.H.A.R.T
     def check_mem_corruption(self, simgr):
-        if len(simgr.unconstrained):
+        if len(simgr.unconstrained) > 0:
             for path in simgr.unconstrained:
-                if path.satisfiable(extra_constraints=[path.regs.pc == b"AAAAAAAA"]):
-                    path.add_constraints(path.regs.pc == b"AAAAAAAA")
-                    
-                    if path.satisfiable():
-                        temp = path.solver.eval(self.angrbuf, cast_to=bytes)
+                path.add_constraints(path.regs.pc == b"A"*8)
+                
+                if path.satisfiable():
+                    temp = path.solver.eval(self.angrbuf, cast_to=bytes)
 
-                        try:
-                            self.angrbuf = temp[:temp.index(b"AAAAAAAAA")]
-                            
-                            simgr.stashes['mem_corrupt'].append(path)
+                    try:
+                        self.offset = temp[:temp.index(b"A"*8)]
+                        
+                        simgr.stashes['mem_corrupt'].append(path)
 
-                        except:
-                            pass
+                    except:
+                        pass
 
-                    simgr.stashes['unconstrained'].remove(path)
-                    simgr.drop(stash='active')
+                simgr.stashes['unconstrained'].remove(path)
+                simgr.drop(stash='active')
 
         return simgr
 
@@ -114,7 +115,7 @@ class Dynamic:
         state = p.factory.blank_state(addr=start_function, stdin=self.angrbuf, add_options=angr.options.unicorn)
 
         simgr = p.factory.simgr(state, save_unconstrained=True)
-        simgr.stashes['corrupt']  = []
+        simgr.stashes['mem_corrupt']  = []
 
         def prevent_death(state):
             read_size = state.solver.eval(state.regs.rsi)
@@ -126,6 +127,4 @@ class Dynamic:
 
         simgr.explore(step_func=self.check_mem_corruption)
 
-        print(simgr.stashes["corrupt"])
-        print(self.angrbuf)
-
+        return self.offset 

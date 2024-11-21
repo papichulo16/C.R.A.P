@@ -76,8 +76,11 @@ def handle_exploits(binary):
             flag = e.ret2one(binary, libc_leak, False)
 
             if not flag:
-                # angr!!
-                pass
+                print("[*] Trying angr")
+                flag = e.ret2one(binary, libc_leak, False, use_angr=True)
+            
+            if not flag:
+                flag = e.ret2one(binary, libc_leak, True, use_angr=True)
 
         return flag.decode()
 
@@ -96,8 +99,8 @@ def handle_exploits(binary):
         flag = e.ret2execve(binary)
 
         if not flag:
-            # angr!!
-            pass
+            print("[*] Using angr")
+            flag = e.ret2execve(binary, use_angr=True)
 
         return flag.decode()
 
@@ -114,8 +117,7 @@ def handle_exploits(binary):
             flag = e.ret2system(binary)
 
             if not flag:
-                # angr!!
-                pass
+                flag = e.ret2system(binary, use_angr=True)
 
         return flag.decode()
 
@@ -144,10 +146,6 @@ def handle_exploits(binary):
             print("[*] Shortening ROP chain 3.")
 
             flag = e.ret2syscall(binary, syscall, 3)
-
-        if not flag:
-            # angr!!
-            pass
 
         return flag.decode()
 
