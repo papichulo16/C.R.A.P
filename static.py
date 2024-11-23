@@ -58,9 +58,14 @@ class Static:
                     print("[!] Did not find free leak.")
 
 
-        # find value of rsi, if there is one
+    def get_calls(self, function):
+        bob = []
 
-        # return the function used in rsi from the plt table
+        for alice in function["ops"]:
+            if "call" in alice["disasm"]:
+                bob.append(alice)
+
+        return bob
 
     def get_cmps(self, function):
         bob = []

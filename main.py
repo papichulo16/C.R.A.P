@@ -42,13 +42,15 @@ def handle_exploits(binary):
         if "win" in e.pwnelf.sym.keys():
             print("[*] GOT overwrite detected.")
 
-            flag = None
+            vuln = json.loads(e.pipe.cmd("pdfj @ sym.vuln"))
+            flag = e.got_overwrite(binary, vuln)
 
             if not flag:
                 # kys again???
                 pass
 
             return flag.decode()
+
 
         # printf read
         print("[*] Printf read var detected")
@@ -162,11 +164,15 @@ def test_category(category):
 
     for binary in bins:
         print("========== " + binary)
-        flag = handle_exploits(binary)
-        flags.append(flag)
+        try:
+            flag = handle_exploits(binary)
+            flags.append(flag)
 
-        if flag == "flag{your_mom_is_very_beautiful_to_me}":
-            count += 1
+            if flag == "flag{your_mom_is_very_beautiful_to_me}":
+                count += 1
+
+        except:
+            pass
 
     end = time.time()
     print(f"==== Test conclusion: {count}/10 in {round(end - start, 2)} seconds. ====")
@@ -211,8 +217,8 @@ def deep_test():
     print("=========================================")
 
 
-test_category("bin-ret2one")
-#deep_test()
+#test_category("bin-got-overwrite")
+deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
 #print(flag)
