@@ -6,8 +6,6 @@ class ROP:
     def find_optimal_gadget(self, gadgets, targets, completed):
         targets_minimized = [ i for i in targets if i not in completed ]
         gadgets = sorted(gadgets, key=len)
-        print(gadgets)
-        print(targets_minimized)
 
         if len(targets) == 1:
             return gadgets[0]
@@ -33,7 +31,6 @@ class ROP:
 
     def use_gadget(self, gadget_used, dict_registers, completed):
         payload = p64(int(gadget_used.split(":")[0], 16))
-        print(gadget_used)
 
         alice = gadget_used.split(":")
         instructions = alice[1].split(";")

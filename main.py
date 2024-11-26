@@ -87,15 +87,16 @@ def handle_exploits(binary):
 
         return flag.decode()
 
-    # check for "win" in pwnelf.sym -- ret2win/rop params
-    if "constrained_win" in e.pwnelf.sym.keys():
-        pass
-
+    # ret2win -- order might change 
     if "win" in e.pwnelf.sym.keys():
         win = True
         #e.ret2win(binary)
 
-    # check for "execve" in pwnelf.plt -- ret2execve
+    # check for "win" in pwnelf.sym -- ret2win/rop params
+    if "constrained_win" in e.pwnelf.sym.keys():
+        pass
+
+        # check for "execve" in pwnelf.plt -- ret2execve
     if "execve" in e.pwnelf.plt.keys():
         print("[*] ret2execve detected.")
         
@@ -144,9 +145,9 @@ def handle_exploits(binary):
         flag = e.write_gadgets(binary)
 
         if not flag:
-            print("[*] Trying without a ret")
+            print("[*] Trying with a ret")
 
-            flag = e.write_gadgets(binary, add_ret=False)
+            flag = e.write_gadgets(binary, add_ret=True)
 
         if not flag:
             # bruh
@@ -199,6 +200,7 @@ def test_category(category):
 
     for binary in bins:
         print("========== " + binary)
+        #flag = handle_exploits(binary)
         
         try:
             flag = handle_exploits(binary)
@@ -257,8 +259,8 @@ def deep_test():
     print("=========================================")
 
 
-#test_category("bin-ret2system")
-#deep_test()
+#test_category("bin-write-gadgets")
+deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
 #print(flag)
