@@ -26,6 +26,12 @@ def handle_exploits(binary):
             pass
 
         return flag.decode()
+    if True:
+        # constrained_win = json.loads(e.pipe.cmd("pdfj @ sym.constrained_win"))
+        # e.rop_parameters(binary, constrained_win)
+        
+        e.ret2win(binary)
+        return
 
     # printf vulns -- read/write/got overwrite
     if printf == "printf":
@@ -260,8 +266,8 @@ def deep_test():
 
 
 #test_category("bin-write-gadgets")
-deep_test()
+# deep_test()
 
-#flag = handle_exploits("./ace-student/test-bins/bin-printf-write-var-0")
+flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
 #print(flag)
 

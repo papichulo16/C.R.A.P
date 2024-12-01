@@ -61,6 +61,7 @@ class Static:
     def get_calls(self, function):
         bob = []
 
+        # print(function)
         for alice in function["ops"]:
             if "call" in alice["disasm"]:
                 bob.append(alice)
@@ -69,7 +70,7 @@ class Static:
 
     def get_cmps(self, function):
         bob = []
-
+        # print(function["ops"])
         for alice in function["ops"]:
             if "cmp" in alice["disasm"]:
                 bob.append(alice)
@@ -82,12 +83,12 @@ class Static:
         try:
             for instruction in arr:
                 asm = instruction["disasm"].split(",")
-                values[asm[0][asm[0].index("var_") + 4:asm[0].index("]") - 1]] = int(asm[1], 16)
-
+                values[hex(int(asm[0][asm[0].index("var_") + 4:asm[0].index("]") - 1], 16))] = int(asm[1], 16)
+            return values
         except:
-            pass
+            return None
 
-        print(values)
+        
          
     
     # this function will return what the value is for each register at a specific call
