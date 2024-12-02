@@ -95,7 +95,9 @@ def handle_exploits(binary):
 
         if not flag:
             # angr
-            pass
+            print("[*] Using angr")
+
+            flag = e.ret2win(binary, use_angr=True)
 
         return flag.decode()
 
@@ -108,7 +110,9 @@ def handle_exploits(binary):
 
         if not flag:
             # angr
-            pass
+            print("[*] Using angr")
+
+            flag = e.rop_parameters(binary, constrained_win, use_angr=True)
 
         return flag.decode()
 
