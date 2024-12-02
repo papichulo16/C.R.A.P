@@ -278,8 +278,8 @@ def deep_test():
     print("=========================================")
 
 
-#test_category("bin-ret2win")
-deep_test()
+test_category("bin-rop-parameters")
+#deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
 #print(flag)
