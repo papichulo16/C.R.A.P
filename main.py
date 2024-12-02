@@ -26,13 +26,7 @@ def handle_exploits(binary):
             pass
 
         return flag.decode()
-    if True:
-        # constrained_win = json.loads(e.pipe.cmd("pdfj @ sym.constrained_win"))
-        # e.rop_parameters(binary, constrained_win)
         
-        e.ret2win(binary)
-        return
-
     # printf vulns -- read/write/got overwrite
     if printf == "printf":
         if "pwnme" in e.pwnelf.sym.keys():
@@ -95,12 +89,29 @@ def handle_exploits(binary):
 
     # ret2win -- order might change 
     if "win" in e.pwnelf.sym.keys():
-        win = True
-        #e.ret2win(binary)
+        print("[*] ret2win detected")
+
+        flag = e.ret2win(binary)
+
+        if not flag:
+            # angr
+            pass
+
+        return flag.decode()
 
     # check for "win" in pwnelf.sym -- ret2win/rop params
     if "constrained_win" in e.pwnelf.sym.keys():
-        pass
+        print("[*] ROP Parameters detected")
+
+        constrained_win = json.loads(e.pipe.cmd("pdfj @ sym.constrained_win"))
+        flag = e.rop_parameters(binary, constrained_win)
+
+        if not flag:
+            # angr
+            pass
+
+        return flag.decode()
+
 
         # check for "execve" in pwnelf.plt -- ret2execve
     if "execve" in e.pwnelf.plt.keys():
@@ -204,6 +215,8 @@ def test_category(category):
     start = time.time()
     failed = []
 
+    #flag = handle_exploits(bins[2])
+
     for binary in bins:
         print("========== " + binary)
         #flag = handle_exploits(binary)
@@ -265,9 +278,9 @@ def deep_test():
     print("=========================================")
 
 
-#test_category("bin-write-gadgets")
-# deep_test()
+#test_category("bin-ret2win")
+deep_test()
 
-flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
+#flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
 #print(flag)
 
