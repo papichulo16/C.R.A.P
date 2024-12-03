@@ -30,7 +30,7 @@ class App:
 
         # if there is a libc version then yay
         try:
-            self.pwnlibc = ELF((b"./ace-student/libc.so.6").decode(), False)
+            self.pwnlibc = ELF((b"../libc.so.6").decode(), False)
             #self.pwnlibc = ELF((self.pwnelf.runpath + b"/libc.so.6").decode(), False)
 
         except:

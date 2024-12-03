@@ -57,7 +57,7 @@ class Dynamic:
 
             '''
 
-            rand_name = "./gdb-scripts/script" + str(random.randint(0, 0xfffffff)) + ".gdb"
+            rand_name = "../../gdb-scripts/script" + str(random.randint(0, 0xfffffff)) + ".gdb"
 
             with open(rand_name, "w") as file:
                 file.write(script_contents)
