@@ -451,19 +451,27 @@ if __name__ == "__main__":
             break
 
         flag = "FLAG"
+        flag = challenge
         print(f"=============== {challenge}")
-        try:
-            flag = handle_exploits(challenge, ["fitsec.monster", port_count])
 
-        except:
-            pass
-        
+        for i in range(10):
+            try:
+                flag = handle_exploits(challenge, ["fitsec.monster", port_count])
+                break
+
+            except:
+                pass
+            
         port_count += 1
+        flag = flag.strip()
         flags.append(flag)
     # ----- Main Execution Loop! ----- #
         data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
         response = requests.post(challenge_url, headers=headers, data=data)
 
     print(flags)
+    for alice in flags:
+        if "flag{" not in alice:
+            print(alice)
     
 
