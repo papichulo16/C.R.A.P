@@ -1,7 +1,7 @@
 import time
 import json
 import os, subprocess, requests
-import multiprocess as mp
+import multiprocessing as mp
 
 from dynamic import Dynamic
 from static import Static
@@ -422,6 +422,7 @@ def run(challenges, challenge_list):
 
         flag = "FLAG"
         flag = challenge
+        port_count = int(challenge[-5:])
         print(f"=============== {challenge}")
 
         for i in range(10):
