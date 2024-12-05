@@ -206,4 +206,4 @@ class Static:
                 return get_registers(asm)
         return None
 
-
+    

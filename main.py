@@ -11,7 +11,7 @@ def handle_exploits(binary, r=None):
     e = Exploits(binary)
     d = Dynamic()
     s = Static()
-
+    
     printf = d.detect_printf_vuln(binary)
     win = False
     libc_leak = None
@@ -27,6 +27,7 @@ def handle_exploits(binary, r=None):
             pass
 
         return flag.decode()
+        
         
     # printf vulns -- read/write/got overwrite
     if printf == "printf":
@@ -307,6 +308,7 @@ def deep_test():
 def logo():
     alice = '''
 
+<<<<<<< Updated upstream
 
                                        ...............
                                        ...............
@@ -386,6 +388,9 @@ def logo():
 #deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
+=======
+flag = handle_exploits("./ace-student/test-bins/bin-rop-parameters-0")
+>>>>>>> Stashed changes
 #print(flag)
 
 # Access token for team to make api calls -- CHANGE THIS
