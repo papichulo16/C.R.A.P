@@ -445,7 +445,7 @@ if __name__ == "__main__":
                 subprocess.run(f"pwninit --bin {file} --libc ../libc.so.6 --ld ../ld-2.27.so --no-template && mv {file}_patched {file}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # breh
-    port_count = 20000
+    port_count = 20052
     challenges = sorted(os.listdir())
     flags = []
 
@@ -453,11 +453,16 @@ if __name__ == "__main__":
         if challenge == 'flag.txt':
             break
 
+        # remove this
+        if challenge != f"bin-{port_count}":
+            continue
+
         flag = "FLAG"
         flag = challenge
         print(f"=============== {challenge}")
 
         for i in range(10):
+            flag = handle_exploits(challenge, ["fitsec.monster", port_count])
             try:
                 flag = handle_exploits(challenge, ["fitsec.monster", port_count])
                 break
@@ -471,6 +476,9 @@ if __name__ == "__main__":
     # ----- Main Execution Loop! ----- #
         data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
         response = requests.post(challenge_url, headers=headers, data=data)
+
+        # remove this
+        break
 
     print(flags)
     for alice in flags:
