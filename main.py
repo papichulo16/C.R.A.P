@@ -388,9 +388,7 @@ def logo():
 #deep_test()
 
 #flag = handle_exploits("./ace-student/test-bins/bin-ret2win-0")
-=======
-flag = handle_exploits("./ace-student/test-bins/bin-rop-parameters-0")
->>>>>>> Stashed changes
+#flag = handle_exploits("./ace-student/test-bins/bin-rop-parameters-0")
 #print(flag)
 
 # Access token for team to make api calls -- CHANGE THIS
