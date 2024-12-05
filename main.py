@@ -421,7 +421,7 @@ if __name__ == "__main__":
     while(1):
         try:
             subprocess.run("git clone https://github.com/password987654321/ace-student.git", shell=True)
-            os.chdir("ace-student/test-bins") # CHANGE THIS EVENTUALLY
+            os.chdir("ace-student/comp-bins") # CHANGE THIS EVENTUALLY
             break
         except Exception as e:
             print("Failed to clone git repo!")
@@ -447,7 +447,7 @@ if __name__ == "__main__":
                 subprocess.run(f"pwninit --bin {file} --libc ../libc.so.6 --ld ../ld-2.27.so --no-template && mv {file}_patched {file}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # breh
-    port_count = 10000
+    port_count = 20000
     challenges = sorted(os.listdir())
     flags = []
 
