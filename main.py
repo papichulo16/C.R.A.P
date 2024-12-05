@@ -1,6 +1,7 @@
 import time
 import json
 import os, subprocess, requests
+import multiprocess as mp
 
 from dynamic import Dynamic
 from static import Static
@@ -412,6 +413,32 @@ flag_pattern = r'flag\{[^}]+\}'
 # binary, receive the flag, and submit the flag     #
 # ------------------------------------------------- #
 
+flags = []
+
+def run(challenges, challenge_list):
+    for challenge in challenges:
+        if challenge == 'flag.txt':
+            break
+
+        flag = "FLAG"
+        flag = challenge
+        print(f"=============== {challenge}")
+
+        for i in range(10):
+            try:
+                flag = handle_exploits(challenge, ["fitsec.monster", port_count])
+                break
+
+            except:
+                pass
+            
+        port_count += 1
+        flag = flag.strip()
+        flags.append(flag)
+    # ----- Main Execution Loop! ----- #
+        data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
+        response = requests.post(challenge_url, headers=headers, data=data)
+
 if __name__ == "__main__":
     logo()
 
@@ -447,31 +474,44 @@ if __name__ == "__main__":
     # breh
     port_count = 20000
     challenges = sorted(os.listdir())
-    flags = []
+
+    c1 = []
+    c2 = []
+    c3 = []
+    c4 = []
+    c5 = []
+
+    for i in range(len(challenges)):
+        if i % 5 == 0: 
+            c1.append(challenges[i])
+        elif i % 4 == 0:
+            c2.append(challenges[i])
+        elif i % 3 == 0:
+            c3.append(challenges[i])
+        elif i % 2 == 0:
+            c4.append(challenges[i])
+        else:
+            c5.append(challenges[i])
+
+    p1 = mp.Process(target=run, args=(c1, challenge_list,))
+    p2 = mp.Process(target=run, args=(c2, challenge_list,))
+    p3 = mp.Process(target=run, args=(c3, challenge_list,))
+    p4 = mp.Process(target=run, args=(c4, challenge_list,))
+    p5 = mp.Process(target=run, args=(c5, challenge_list,))
+
     start = time.time()
 
-    for challenge in challenges:
-        if challenge == 'flag.txt':
-            break
+    p1.start() 
+    p2.start() 
+    p3.start() 
+    p4.start() 
+    p5.start() 
 
-        flag = "FLAG"
-        flag = challenge
-        print(f"=============== {challenge}")
-
-        for i in range(10):
-            try:
-                flag = handle_exploits(challenge, ["fitsec.monster", port_count])
-                break
-
-            except:
-                pass
-            
-        port_count += 1
-        flag = flag.strip()
-        flags.append(flag)
-    # ----- Main Execution Loop! ----- #
-        data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
-        response = requests.post(challenge_url, headers=headers, data=data)
+    p1.join()
+    p2.join()
+    p3.join()
+    p4.join()
+    p5.join()
 
     end = time.time()
     count = 0
