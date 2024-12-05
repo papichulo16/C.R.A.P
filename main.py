@@ -459,7 +459,6 @@ if __name__ == "__main__":
         print(f"=============== {challenge}")
 
         for i in range(10):
-            flag = handle_exploits(challenge, ["fitsec.monster", port_count])
             try:
                 flag = handle_exploits(challenge, ["fitsec.monster", port_count])
                 break
