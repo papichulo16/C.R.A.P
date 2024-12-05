@@ -445,17 +445,14 @@ if __name__ == "__main__":
                 subprocess.run(f"pwninit --bin {file} --libc ../libc.so.6 --ld ../ld-2.27.so --no-template && mv {file}_patched {file}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
     # breh
-    port_count = 20052
+    port_count = 20000
     challenges = sorted(os.listdir())
     flags = []
+    start = time.time()
 
     for challenge in challenges:
         if challenge == 'flag.txt':
             break
-
-        # remove this
-        if challenge != f"bin-{port_count}":
-            continue
 
         flag = "FLAG"
         flag = challenge
@@ -477,12 +474,14 @@ if __name__ == "__main__":
         data = json.dumps({"challenge_id" : challenge_list[challenge], "submission" : flag})
         response = requests.post(challenge_url, headers=headers, data=data)
 
-        # remove this
-        break
+    end = time.time()
+    count = 0
 
     print(flags)
     for alice in flags:
         if "flag{" not in alice:
+            count += 1
             print(alice)
     
+    print(f"==== Conclusion: {120 - count}/120 in {round(end - start, 2)} seconds (or {round((end - start) / 60, 2)} minutes). ====")
 
